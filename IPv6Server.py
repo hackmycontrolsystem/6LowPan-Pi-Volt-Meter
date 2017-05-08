@@ -6,8 +6,8 @@ from subprocess import PIPE, Popen
 HOST = ''    # Symbolic name meaning all available interfaces
 PORT = 2016  # Arbitrary non-privileged port
 
-def get_cpu_temperature():
-    process = Popen(['vcgencmd', 'measure_temp'], stdout=PIPE)
+def get_volts():
+    process = Popen(['vcgencmd', 'measure_volts'], stdout=PIPE)
     output, _error = process.communicate()
     return output
 
@@ -19,7 +19,7 @@ def main():
 
     while True:
         conn, addr = s6.accept()
-        conn.send(get_cpu_temperature())
+        conn.send(get_volts())
         conn.close()
 
 if __name__ == '__main__':
