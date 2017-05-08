@@ -1,0 +1,62 @@
+#Installing a 6LoWPAN Kernel
+sudo apt-get -y install rpi-update git libncurses5-dev bc
+rpi-update	#This will install the latest firmware bootloader.
+git clone --depth 1 https://github.com/raspberrypi/linux.git --branch rpi-4.7.y --single-branch linux-rpi2
+cd linux-rpi2/
+make bcm2709_defconfig
+-----
+#Then run menuconfig to do two things:
+#1) Install the device driver as a module from the menu entry:
+
+#Device Drivers
+#--> Network device support
+#  --> IEEE 802.15.4 drivers
+
+#2) Install 6LoWPAN support as a module from the menu entry:
+
+#Networking support
+#--> Networking options
+#  --> IEEE Std 802.15.4 Low-Rate Wireless Personal Area Networks support
+-----
+make zImage modules dtbs -j4
+sudo make modules_install dtbs_install
+sudo cp arch/arm/boot/zImage /boot/kernel.4.7.2.img
+sudo vim.tiny /boot/config.txt
+-----
+#Append these lines at the end:
+kernel=kernel.4.7.2.img
+device_tree=bcm2709-rpi-2-b.dtb
+dtoverlay=at86rf233
+-----
+sudo reboot
+uname -a	#Linux raspberrypi 4.7.2-v7+ #1 SMP Fri Aug 26 15:45:29 UTC 2016 armv7l GNU/Linux
+
+#Install 6LowPan
+sudo apt-get install dh-autoreconf
+git clone --depth 1 https://github.com/linux-wpan/wpan-tools.git wpan-tools
+cd wpan-tools
+./autogen.sh
+./configure CFLAGS='-g -O0' --prefix=/usr --sysconfdir=/etc
+ ↪--libdir=/usr/lib
+make
+sudo make install
+ls /usr/bin | grep iwpan
+sudo modprobe at86rf230
+lsmod | grep at86rf230
+
+#Show supported frequencies
+iwpan list
+
+#Set ID of 0xbeef
+iwpan dev wpan0 set pan_id 0xbeef
+
+#Bring up interface
+ip link add link wpan0 name lowpan0 type lowpan
+ifconfig wpan0 up
+ifconfig lowpan0 up
+ifconfig |grep wpan0	
+ifconfig |grep lowpan0	#Only has IPv6 address
+
+#IPv6 Ping
+ping6 -I lowpan0 fe80::ec0b:fb0f:76b9:f393 # IPv6 address of other device
+ping6  fe80::ec0b:fb0f:76b9:f393%lowpan0
